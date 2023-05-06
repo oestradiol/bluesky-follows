@@ -25,4 +25,4 @@ If later on you'd like to unfollow users that aren't following you back and that
 Note: the script uses a cache to avoid making too many API requests. By default, the cache is set to 3 minutes.
 
 # License
-This project is licensed under the GNU 3.0 License.
+This project is licensed under the GNU GPL-3.0 License.
