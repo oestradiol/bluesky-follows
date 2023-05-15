@@ -4,8 +4,7 @@ This is a Node.js script for automating certain tasks on Bluesky Social, a socia
 ## Currently, the script is able to:
 - Log in to Bluesky Social;
 - Back up a list of followers and a list of followed users to separate JSON files;
-- Follow all suggested users;
-- Unfollow users that aren't following you back and that you hadn't originally followed.
+- Keep tracking of all follows/followers.
 
 ## Requirements
 - Node.js;
