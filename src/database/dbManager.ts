@@ -62,7 +62,7 @@ export default class DbManager {
   private static readonly updateFollows = async () => {
     console.log("Updating follows consistency...");
     const follows = await Manager.getAllFollows(Config.IDENTIFIER!);
-    for (const u of await BskyUser.find({ type: FollowType.Manual })) {
+    for (const u of [...await BskyUser.find({ type: FollowType.Manual }), ...await BskyUser.find({ type: FollowType.AutoFollow })]) {
       if (!follows.find(f => f.did == u.did)) {
         console.log(`You unfollowed ${u.handle}. Goodbye!!`);
         await u.updateOne({ type: FollowType.Unknown, isBlacklisted: true }).exec();
