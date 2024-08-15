@@ -17,25 +17,34 @@ export default class DbManager {
 
   static readonly update = async () => {
     // Update followers
-    await DbManager.updateFollowers();
+    const {newFollowers, lostFollowers} = await DbManager.updateFollowers();
 
     // Update follows
-    await DbManager.updateFollows();
+    const {newFollows, lostFollows} = await DbManager.updateFollows();
 
     // TODO: Add last followed dates (3d ago)
-    // TODO: Be careful with people that might be deactivated or block u
     // TODO: Add update info, such as handle
 
     console.log("Finished updating database consistency!");
+
+    const me = (await agent.getProfile({ actor: Config.IDENTIFIER! })).data;
+    console.log(`You got ${newFollowers} new followers, and lost ${lostFollowers}.`);
+    console.log(`You followed ${newFollows} new people, and unfollowed ${lostFollows}.`);
+    console.log(`That leaves you with a ${newFollowers - lostFollowers} followers difference, and a ${newFollows - lostFollows} follows difference.`);
+    console.log(`You now have ${me.followersCount} followers and follow ${me.followsCount} people.`)
   }
 
-  private static readonly updateFollowers = async () => {
+  private static readonly updateFollowers = async (): Promise<{ newFollowers: number, lostFollowers: number }> => {
     console.log("Updating followers consistency...");
+
+    let newFollowers = 0;
+    let lostFollowers = 0;
     const followers = await Manager.getAllFollowers(Config.IDENTIFIER!);
     for (const u of await BskyUser.find({ followsMe: true })) {
       if (!followers.find(f => f.did == u.did)) {
         console.log(`${u.handle} unfollowed you :c`);
         await u.updateOne({ followsMe: false }).exec();
+        lostFollowers++;
       }
     }
     for (const f of followers) {
@@ -44,6 +53,7 @@ export default class DbManager {
         if (!u.followsMe) {
           console.log(`${f.handle} now follows you! <3`);
           await u.updateOne({ followsMe: true }).exec();
+          newFollowers++;
         }
       } else {
         console.log(`${f.handle} now follows you! <3`);
@@ -55,17 +65,23 @@ export default class DbManager {
           followsMe: true,
         };
         await BskyUserRepo.createBskyUser(struct, false);
+        newFollowers++;
       }
     }
+    return { newFollowers, lostFollowers };
   }
 
-  private static readonly updateFollows = async () => {
+  private static readonly updateFollows = async (): Promise<{ newFollows: number, lostFollows: number }> => {
     console.log("Updating follows consistency...");
+
+    let newFollows = 0;
+    let lostFollows = 0;
     const follows = await Manager.getAllFollows(Config.IDENTIFIER!);
     for (const u of [...await BskyUser.find({ type: FollowType.Manual }), ...await BskyUser.find({ type: FollowType.AutoFollow })]) {
       if (!follows.find(f => f.did == u.did)) {
         console.log(`You unfollowed ${u.handle}. Goodbye!!`);
         await u.updateOne({ type: FollowType.Unknown, isBlacklisted: true }).exec();
+        lostFollows++;
       }
     }
     for (const f of follows) {
@@ -75,6 +91,7 @@ export default class DbManager {
           const numOfAttempts = u.numOfAttempts + 1;
           console.log(`You now follow ${f.handle}. Attempt ${numOfAttempts}.`);
           await u.updateOne({ type: FollowType.Manual, numOfAttempts: numOfAttempts, lastFollowedAt: new Date() }).exec();
+          newFollows++;
         }
       } else {
         console.log(`You now follow ${f.handle}. Attempt 1.`);
@@ -87,8 +104,10 @@ export default class DbManager {
           lastFollowedAt: new Date(),
         };
         await BskyUserRepo.createBskyUser(struct, false);
+        newFollows++;
       }
     }
+    return {newFollows, lostFollows};
   }
 
   /**
